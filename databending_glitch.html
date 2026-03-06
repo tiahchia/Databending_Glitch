@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Databending Glitch</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Archivo+Black&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --corrupt-bg: #0a0a0c;
+            --glitch-cyan: #00ffff;
+            --glitch-magenta: #ff00ff;
+            --glitch-yellow: #ffff00;
+            --artifact: #1a1a1e;
+            --corruption: rgba(255, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Space Mono', monospace;
+            background: var(--corrupt-bg);
+            color: #e0e0e0;
+            overflow-x: hidden;
+            cursor: crosshair;
+        }
+
+        /* Scanline Overlay */
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            pointer-events: none;
+            background: linear-gradient(
+                to bottom,
+                transparent 50%,
+                rgba(0, 0, 0, 0.1) 50%
+            );
+            background-size: 100% 4px;
+            opacity: 0.3;
+        }
+
+        /* CRT Flicker */
+        .crt-flicker {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 999;
+            pointer-events: none;
+            background: rgba(255, 255, 255, 0.02);
+            opacity: 0;
+            animation: flicker 0.15s infinite;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.02; }
+            50% { opacity: 0.05; }
+            100% { opacity: 0.02; }
+        }
+
+        /* Glitch Container */
+        .glitch-hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* RGB Split Text */
+        .glitch-title {
+            font-family: 'Archivo Black', sans-serif;
+            font-size: clamp(3rem, 12vw, 10rem);
+            line-height: 0.9;
+            text-align: center;
+            position: relative;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: -0.05em;
+        }
+
+        .glitch-title::before,
+        .glitch-title::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .glitch-title::before {
+            color: var(--glitch-cyan);
+            animation: glitch-1 2s infinite linear alternate-reverse;
+            clip-path: polygon(0 0, 100% 0, 100% 35%, 0 35%);
+        }
+
+        .glitch-title::after {
+            color: var(--glitch-magenta);
+            animation: glitch-2 3s infinite linear alternate-reverse;
+            clip-path: polygon(0 65%, 100% 65%, 100% 100%, 0 100%);
+        }
+
+        @keyframes glitch-1 {
+            0%, 100% { transform: translate(0); }
+            20% { transform: translate(-3px, 3px); }
+            40% { transform: translate(-3px, -3px); }
+            60% { transform: translate(3px, 3px); }
+            80% { transform: translate(3px, -3px); }
+        }
+
+        @keyframes glitch-2 {
+            0%, 100% { transform: translate(0); }
+            20% { transform: translate(3px, -3px); }
+            40% { transform: translate(3px, 3px); }
+            60% { transform: translate(-3px, -3px); }
+            80% { transform: translate(-3px, 3px); }
+        }
+
+        /* Corruption Artifacts */
+        .artifact {
+            position: absolute;
+            background: var(--artifact);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+        }
+
+        .artifact-1 {
+            width: 200px;
+            height: 150px;
+            top: 20%;
+            left: 10%;
+            transform: skew(-5deg);
+            animation: artifact-float 8s ease-in-out infinite;
+        }
+
+        .artifact-2 {
+            width: 150px;
+            height: 200px;
+            top: 60%;
+            right: 15%;
+            transform: skew(3deg);
+            animation: artifact-float 10s ease-in-out infinite reverse;
+        }
+
+        @keyframes artifact-float {
+            0%, 100% { transform: translateY(0) skew(-5deg); }
+            50% { transform: translateY(-20px) skew(-5deg); }
+        }
+
+        .artifact img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: grayscale(100%) contrast(1.2);
+            mix-blend-mode: screen;
+            opacity: 0.5;
+        }
+
+        /* Channel Separation Bars */
+        .channel-bar {
+            position: absolute;
+            height: 20px;
+            width: 100%;
+            left: 0;
+            mix-blend-mode: screen;
+            opacity: 0.6;
+        }
+
+        .channel-r {
+            background: rgba(255, 0, 0, 0.3);
+            top: 40%;
+            animation: channel-shift 4s infinite;
+        }
+
+        .channel-g {
+            background: rgba(0, 255, 0, 0.3);
+            top: 50%;
+            animation: channel-shift 5s infinite reverse;
+        }
+
+        .channel-b {
+            background: rgba(0, 0, 255, 0.3);
+            top: 60%;
+            animation: channel-shift 6s infinite;
+        }
+
+        @keyframes channel-shift {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-20px); }
+            75% { transform: translateX(20px); }
+        }
+
+        /* Data Corruption Text */
+        .corrupt-text {
+            max-width: 700px;
+            margin: 80px auto;
+            padding: 0 40px;
+            font-size: 1rem;
+            line-height: 1.8;
+            color: rgba(255, 255, 255, 0.6);
+            position: relative;
+        }
+
+        .corrupt-text .corrupted {
+            display: inline-block;
+            position: relative;
+            color: var(--glitch-cyan);
+            animation: text-corrupt 3s infinite;
+        }
+
+        @keyframes text-corrupt {
+            0%, 90%, 100% { 
+                transform: translate(0); 
+                filter: none;
+            }
+            92% { 
+                transform: translate(2px, -2px); 
+                filter: hue-rotate(90deg);
+            }
+            94% { 
+                transform: translate(-2px, 2px); 
+                filter: hue-rotate(180deg);
+            }
+            96% { 
+                transform: translate(2px, 2px); 
+                filter: hue-rotate(270deg);
+            }
+            98% { 
+                transform: translate(-2px, -2px); 
+                filter: hue-rotate(360deg);
+            }
+        }
+
+        /* Glitch Grid */
+        .glitch-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2px;
+            max-width: 1000px;
+            margin: 100px auto;
+            padding: 0 40px;
+        }
+
+        .glitch-cell {
+            aspect-ratio: 1;
+            background: var(--artifact);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .glitch-cell:hover {
+            transform: scale(0.95);
+            z-index: 10;
+        }
+
+        .glitch-cell::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, 
+                var(--glitch-cyan) 0%, 
+                transparent 50%, 
+                var(--glitch-magenta) 100%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            mix-blend-mode: overlay;
+        }
+
+        .glitch-cell:hover::before {
+            opacity: 0.8;
+            animation: cell-glitch 0.3s infinite;
+        }
+
+        @keyframes cell-glitch {
+            0% { transform: translate(0); }
+            25% { transform: translate(-2px, 2px); }
+            50% { transform: translate(2px, -2px); }
+            75% { transform: translate(-2px, -2px); }
+            100% { transform: translate(2px, 2px); }
+        }
+
+        .cell-data {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.4);
+            font-family: 'Space Mono', monospace;
+        }
+
+        /* Corruption Navigation */
+        .corrupt-nav {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 30px;
+            z-index: 100;
+        }
+
+        .nav-glitch {
+            color: rgba(255, 255, 255, 0.4);
+            text-decoration: none;
+            font-size: 0.8rem;
+            letter-spacing: 0.2em;
+            position: relative;
+            padding: 10px 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s;
+        }
+
+        .nav-glitch:hover {
+            color: #fff;
+            border-color: var(--glitch-cyan);
+            text-shadow: 
+                2px 0 var(--glitch-magenta),
+                -2px 0 var(--glitch-cyan);
+            animation: nav-glitch 0.3s infinite;
+        }
+
+        @keyframes nav-glitch {
+            0%, 100% { transform: translate(0); }
+            33% { transform: translate(-2px, 1px); }
+            66% { transform: translate(2px, -1px); }
+        }
+
+        /* Hex Dump Background */
+        .hex-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.03;
+            font-size: 12px;
+            line-height: 1.4;
+            word-break: break-all;
+            pointer-events: none;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <div class="scanlines"></div>
+    <div class="crt-flicker"></div>
+
+    <div class="hex-bg" id="hexBg"></div>
+
+    <section class="glitch-hero">
+        <div class="artifact artifact-1">
+            <div style="width:100%;height:100%;background:linear-gradient(45deg,#1a1a1e,#2a2a2e);"></div>
+        </div>
+        <div class="artifact artifact-2">
+            <div style="width:100%;height:100%;background:linear-gradient(135deg,#2a2a2e,#1a1a1e);"></div>
+        </div>
+
+        <div class="channel-bar channel-r"></div>
+        <div class="channel-bar channel-g"></div>
+        <div class="channel-bar channel-b"></div>
+
+        <h1 class="glitch-title" data-text="DATABENDING">DATABENDING</h1>
+        <p style="margin-top:30px;color:rgba(255,255,255,0.4);font-size:0.9rem;letter-spacing:0.3em;">
+            CONTROLLED CORRUPTION // GLITCH AESTHETICS
+        </p>
+    </section>
+
+    <section class="corrupt-text">
+        <p>
+            We embrace the <span class="corrupted">beauty of broken data</span>. 
+            In a world obsessed with perfection, we find aesthetic value in the 
+            artifacts of corruption—JPEG compression errors, signal loss, buffer 
+            overflows transformed into visual poetry. This is not destruction; 
+            it's <span class="corrupted">curated decay</span>.
+        </p>
+    </section>
+
+    <section class="glitch-grid">
+        <div class="glitch-cell"><span class="cell-data">0x00</span></div>
+        <div class="glitch-cell"><span class="cell-data">0x01</span></div>
+        <div class="glitch-cell"><span class="cell-data">0x02</span></div>
+        <div class="glitch-cell"><span class="cell-data">0x03</span></div>
+        <div class="glitch-cell"><span class="cell-data">0x04</span></div>
+        <div class="glitch-cell"><span class="cell-data">0x05</span></div>
+        <div class="glitch-cell"><span class="cell-data">0x06</span></div>
+        <div class="glitch-cell"><span class="cell-data">0x07</span></div>
+        <div class="glitch-cell"><span class="cell-data">0x08</span></div>
+        <div class="glitch-cell"><span class="cell-data">0x09</span></div>
+        <div class="glitch-cell"><span class="cell-data">0x0A</span></div>
+        <div class="glitch-cell"><span class="cell-data">0x0B</span></div>
+    </section>
+
+    <nav class="corrupt-nav">
+        <a href="#" class="nav-glitch">CORRUPT</a>
+        <a href="#" class="nav-glitch">BEND</a>
+        <a href="#" class="nav-glitch">BREAK</a>
+    </nav>
+
+    <script>
+        // Generate hex background
+        const hexChars = '0123456789ABCDEF';
+        const hexBg = document.getElementById('hexBg');
+        let hexString = '';
+
+        for (let i = 0; i < 3000; i++) {
+            hexString += hexChars[Math.floor(Math.random() * 16)];
+            if (i % 2 === 1) hexString += ' ';
+            if (i % 32 === 31) hexString += '<br>';
+        }
+        hexBg.innerHTML = hexString;
+
+        // Random glitch triggers
+        const title = document.querySelector('.glitch-title');
+
+        setInterval(() => {
+            if (Math.random() > 0.7) {
+                title.style.transform = `translate(${Math.random() * 4 - 2}px, ${Math.random() * 4 - 2}px)`;
+                setTimeout(() => {
+                    title.style.transform = 'translate(0, 0)';
+                }, 50);
+            }
+        }, 2000);
+
+        // Mouse-based channel separation
+        document.addEventListener('mousemove', (e) => {
+            const x = (e.clientX / window.innerWidth - 0.5) * 20;
+            const y = (e.clientY / window.innerHeight - 0.5) * 20;
+
+            document.querySelector('.channel-r').style.transform = `translateX(${x}px) translateY(${y}px)`;
+            document.querySelector('.channel-g').style.transform = `translateX(${-x}px) translateY(${-y}px)`;
+            document.querySelector('.channel-b').style.transform = `translateX(${x * 0.5}px) translateY(${y * 0.5}px)`;
+        });
+
+        // Cell corruption on click
+        document.querySelectorAll('.glitch-cell').forEach(cell => {
+            cell.addEventListener('click', function() {
+                this.style.background = `hsl(${Math.random() * 360}, 70%, 50%)`;
+                setTimeout(() => {
+                    this.style.background = '';
+                }, 500);
+            });
+        });
+
+        // Random scanline intensity
+        setInterval(() => {
+            const scanlines = document.querySelector('.scanlines');
+            scanlines.style.opacity = 0.2 + Math.random() * 0.2;
+        }, 100);
+    </script>
+</body>
+</html>
